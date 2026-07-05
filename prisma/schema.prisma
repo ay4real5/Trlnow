@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String  @default("CUSTOMER")
+  staffRole    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sentShipments Shipment[]       @relation("SenderShipments")
+  statusUpdates ShipmentStatus[]
+  notifications  Notification[]
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  address   String
+  phone     String?
+  email     String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  originShipments Shipment[]       @relation("OriginBranch")
+  destShipments   Shipment[]       @relation("DestBranch")
+  statusUpdates   ShipmentStatus[]
+}
+
+model Shipment {
+  id                String             @id @default(cuid())
+  trackingNumber    String             @unique
+  senderId          String?
+  senderName        String
+  senderPhone       String?
+  senderAddress     String?
+  recipientName     String
+  recipientPhone    String?
+  recipientAddress  String?
+  originBranchId    String
+  destBranchId      String
+  weight            Float?
+  status            String @default("created")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  estimatedDelivery DateTime?
+
+  sender       User?           @relation("SenderShipments", fields: [senderId], references: [id], onDelete: SetNull)
+  originBranch Branch          @relation("OriginBranch", fields: [originBranchId], references: [id], onDelete: Restrict)
+  destBranch   Branch          @relation("DestBranch", fields: [destBranchId], references: [id], onDelete: Restrict)
+  statusHistory ShipmentStatus[]
+  notifications  Notification[]
+}
+
+model ShipmentStatus {
+  id              String             @id @default(cuid())
+  shipmentId      String
+  status          String
+  location        String?
+  branchId        String?
+  description     String?
+  updatedByUserId String?
+  timestamp       DateTime           @default(now())
+
+  shipment  Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  updatedBy User?    @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId])
+  @@index([timestamp])
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String?
+  shipmentId  String
+  message     String
+  channel     String @default("EMAIL")
+  status      String  @default("pending")
+  sentAt      DateTime?
+  createdAt   DateTime            @default(now())
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([userId])
+}
