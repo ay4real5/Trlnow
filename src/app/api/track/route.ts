@@ -35,8 +35,15 @@ export async function GET(req: Request) {
     return NextResponse.json(shipment);
   } catch (err: any) {
     console.error("[track api error]", err);
+    const message = err?.message || "Failed to fetch shipment";
+    const code = err?.code || "UNKNOWN";
     return NextResponse.json(
-      { error: "Server error", message: err?.message || "Failed to fetch shipment" },
+      {
+        error: "Server error",
+        message,
+        code,
+        hint: "DATABASE_URL may be missing or the database schema is not set up. Run: DB_PROVIDER=postgresql DATABASE_URL=... npx prisma db push",
+      },
       { status: 500 }
     );
   }
