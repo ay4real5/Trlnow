@@ -26,19 +26,28 @@ export default function TrackResultPage({
   const normalizedTrackingNo = normalizeTrackingNumber(trackingNo);
   const [shipment, setShipment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ title: string; message?: string; hint?: string } | null>(null);
 
   useEffect(() => {
     fetch(`/api/track?trackingNumber=${encodeURIComponent(normalizedTrackingNo)}`)
       .then(async (res) => {
+        const data = await res.json();
         if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to fetch");
+          setError({
+            title: data.error || "Error",
+            message: data.message || "Failed to fetch shipment",
+            hint: data.hint,
+          });
+          throw new Error("handled");
         }
-        return res.json();
+        return data;
       })
       .then((data) => setShipment(data))
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        if (err.message !== "handled") {
+          setError({ title: "Network error", message: err.message });
+        }
+      })
       .finally(() => setLoading(false));
   }, [trackingNo]);
 
@@ -55,8 +64,13 @@ export default function TrackResultPage({
       <div className="mx-auto max-w-3xl px-4 py-16">
         <Card className="text-center">
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">Shipment Not Found</h2>
-          <p className="mb-6 text-gray-600">{error}</p>
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">{error.title}</h2>
+          {error.message && <p className="mb-2 text-gray-600">{error.message}</p>}
+          {error.hint && (
+            <p className="mx-auto mb-6 max-w-md rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+              {error.hint}
+            </p>
+          )}
           <Link href="/track">
             <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
