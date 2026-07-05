@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Search, Package } from "lucide-react";
 import { Card, Badge, Button, Input, Select, Table, Th, Td, EmptyState } from "@/components/ui";
-import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS } from "@/lib/utils";
+import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, normalizeTrackingNumber } from "@/lib/utils";
 import AdminLayout from "@/components/AdminLayout";
 
 export default function AdminShipmentsPage() {
@@ -30,12 +30,16 @@ export default function AdminShipmentsPage() {
       .finally(() => setLoading(false));
   }, [filters.status, filters.branchId]);
 
-  const filtered = shipments.filter((s) =>
-    !filters.search ||
-    s.trackingNumber.toLowerCase().includes(filters.search.toLowerCase()) ||
-    s.senderName.toLowerCase().includes(filters.search.toLowerCase()) ||
-    s.recipientName.toLowerCase().includes(filters.search.toLowerCase())
-  );
+  const normalizedSearch = normalizeTrackingNumber(filters.search);
+  const filtered = shipments.filter((s) => {
+    if (!filters.search) return true;
+    const normalizedTracking = normalizeTrackingNumber(s.trackingNumber);
+    return (
+      normalizedTracking.includes(normalizedSearch) ||
+      s.senderName.toLowerCase().includes(filters.search.toLowerCase()) ||
+      s.recipientName.toLowerCase().includes(filters.search.toLowerCase())
+    );
+  });
 
   return (
     <AdminLayout active="Shipments">

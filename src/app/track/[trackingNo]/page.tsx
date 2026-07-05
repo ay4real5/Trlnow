@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle, Circle, Package, Truck, MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button } from "@/components/ui";
-import { formatDate, STATUS_LABELS } from "@/lib/utils";
+import { formatDate, STATUS_LABELS, normalizeTrackingNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +23,13 @@ export default function TrackResultPage({
   params: { trackingNo: string };
 }) {
   const { trackingNo } = params;
+  const normalizedTrackingNo = normalizeTrackingNumber(trackingNo);
   const [shipment, setShipment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/track?trackingNumber=${encodeURIComponent(trackingNo)}`)
+    fetch(`/api/track?trackingNumber=${encodeURIComponent(normalizedTrackingNo)}`)
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json();

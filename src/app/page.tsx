@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Package, Truck, MapPin, Clock, Shield } from "lucide-react";
+import { normalizeTrackingNumber } from "@/lib/utils";
 import { Button, Input } from "@/components/ui";
 
 export default function HomePage() {
@@ -11,8 +12,9 @@ export default function HomePage() {
 
   const handleTrack = (e: React.FormEvent) => {
     e.preventDefault();
-    if (trackingNumber.trim()) {
-      router.push(`/track/${trackingNumber.trim().toUpperCase()}`);
+    const normalized = normalizeTrackingNumber(trackingNumber);
+    if (normalized.startsWith("TRL")) {
+      router.push(`/track/${normalized}`);
     }
   };
 
@@ -31,7 +33,7 @@ export default function HomePage() {
             <form onSubmit={handleTrack} className="mx-auto mt-8 flex max-w-xl gap-3">
               <Input
                 type="text"
-                placeholder="e.g. TRL-0001-0001"
+                placeholder="e.g. TRL-84J2-7K9P-1M3Q"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 className="h-12 text-base"

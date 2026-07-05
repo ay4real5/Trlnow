@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { normalizeTrackingNumber } from "@/lib/utils";
 import { Button, Input, Card } from "@/components/ui";
 
 export default function TrackPage() {
@@ -16,15 +17,16 @@ export default function TrackPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (trackingNumber.trim()) {
-              router.push(`/track/${trackingNumber.trim().toUpperCase()}`);
+            const normalized = normalizeTrackingNumber(trackingNumber);
+            if (normalized.startsWith("TRL")) {
+              router.push(`/track/${normalized}`);
             }
           }}
           className="flex gap-3"
         >
           <Input
             type="text"
-            placeholder="Enter tracking number (e.g. TRL-0001-0001)"
+            placeholder="Enter tracking number (e.g. TRL-84J2-7K9P-1M3Q)"
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
             className="h-12 text-base"

@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeTrackingNumber } from "@/lib/utils";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const trackingNumber = searchParams.get("trackingNumber");
+  const rawTrackingNumber = searchParams.get("trackingNumber");
 
-  if (!trackingNumber) {
+  if (!rawTrackingNumber) {
     return NextResponse.json({ error: "Tracking number required" }, { status: 400 });
   }
 
+  const trackingNumber = normalizeTrackingNumber(rawTrackingNumber);
+  if (!trackingNumber.startsWith("TRL")) {
+    return NextResponse.json({ error: "Invalid tracking number" }, { status: 400 });
+  }
+
   const shipment = await prisma.shipment.findUnique({
-    where: { trackingNumber: trackingNumber.toUpperCase() },
+    where: { trackingNumber },
     include: {
       originBranch: true,
       destBranch: true,

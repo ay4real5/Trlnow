@@ -18,7 +18,7 @@ npm install
 
 # 2. Set up environment variables
 cp .env.example .env
-# Edit .env with your PostgreSQL connection string
+# Default uses SQLite locally — no PostgreSQL needed for dev
 
 # 3. Create database schema
 npx prisma db push
@@ -37,6 +37,11 @@ npm run dev
 | Admin    | admin@trlnow.com     | admin123      |
 | Staff    | staff@trlnow.com     | staff123      |
 | Customer | customer@trlnow.com  | customer123   |
+
+Sample tracking numbers for testing:
+- `TRL-84J2-7K9P-1M3Q` (in transit)
+- `TRL-9X4L-2B8N-5T6W` (delivered)
+
 
 ## Deploy to Vercel
 
@@ -87,11 +92,11 @@ Click **Deploy**. Vercel will:
 ### 6. Set Up Database
 
 After first deploy, run the schema push and seed from your local machine
-using the production DATABASE_URL:
+using the production DATABASE_URL. Set `DB_PROVIDER=postgresql` to switch the provider:
 
 ```bash
-DATABASE_URL="your-vercel-postgres-url" npx prisma db push
-DATABASE_URL="your-vercel-postgres-url" npm run db:seed
+DB_PROVIDER="postgresql" DATABASE_URL="your-vercel-postgres-url" npx prisma db push
+DB_PROVIDER="postgresql" DATABASE_URL="your-vercel-postgres-url" npm run db:seed
 ```
 
 ## Features

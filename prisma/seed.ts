@@ -76,7 +76,7 @@ async function main() {
 
   const sampleShipments = [
     {
-      trackingNumber: 'TRL-0001-0001',
+      trackingNumber: 'TRL-84J2-7K9P-1M3Q',
       senderId: customer.id,
       senderName: 'Alice Customer',
       senderPhone: '07700 123456',
@@ -96,7 +96,7 @@ async function main() {
       ],
     },
     {
-      trackingNumber: 'TRL-0002-0002',
+      trackingNumber: 'TRL-9X4L-2B8N-5T6W',
       senderId: customer.id,
       senderName: 'Alice Customer',
       senderPhone: '07700 123456',

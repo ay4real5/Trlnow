@@ -6,9 +6,30 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateTrackingNumber(): string {
-  const part = () =>
-    Math.floor(1000 + Math.random() * 9000).toString();
-  return `TRL-${part()}-${part()}`;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const segment = (length: number) =>
+    Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `TRL-${segment(4)}-${segment(4)}-${segment(4)}`;
+}
+
+export function normalizeTrackingNumber(input: string): string {
+  // Remove all whitespace and uppercase the input
+  let cleaned = input.trim().toUpperCase().replace(/\s/g, "");
+
+  // If already in dashed format, keep it as-is (must match TRL-XXXX-XXXX-XXXX)
+  if (/^TRL-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  // If no dashes and starts with TRL followed by 12 characters, insert dashes
+  const match = cleaned.match(/^TRL([A-Z0-9]{12})$/);
+  if (match) {
+    const body = match[1];
+    return `TRL-${body.slice(0, 4)}-${body.slice(4, 8)}-${body.slice(8, 12)}`;
+  }
+
+  // Otherwise return the cleaned version as best-effort
+  return cleaned;
 }
 
 export function formatDate(date: Date | string | null | undefined): string {
