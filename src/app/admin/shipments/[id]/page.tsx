@@ -177,6 +177,12 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
     setSavingEdit(false);
   };
 
+  const handleDeleteHistoryEntry = async (entryId: string) => {
+    if (!confirm("Remove this timeline entry? The customer will no longer see it.")) return;
+    const res = await fetch(`/api/shipments/${id}/history/${entryId}`, { method: "DELETE" });
+    if (res.ok) fetchShipment();
+  };
+
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this shipment?")) return;
     const res = await fetch(`/api/shipments/${id}`, { method: "DELETE" });
@@ -353,10 +359,20 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                         </div>
                         {!isLast && <div className="w-0.5 flex-1 bg-gray-200" style={{ minHeight: "2rem" }} />}
                       </div>
-                      <div className={`flex-1 ${isLast ? "" : "pb-6"}`}>
+                      <div className={`group flex-1 ${isLast ? "" : "pb-6"}`}>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-900">{STATUS_LABELS[entry.status] || entry.status}</span>
                           <Badge status={entry.status} />
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHistoryEntry(entry.id)}
+                              className="ml-auto rounded p-1 text-gray-300 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                              title="Remove this timeline entry"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                         {entry.location && (
                           <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
