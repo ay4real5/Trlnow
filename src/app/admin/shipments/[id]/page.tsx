@@ -3,11 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User, MessageSquarePlus, Pencil, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User, MessageSquarePlus, Pencil, Save, Wand2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS } from "@/lib/utils";
+import { generateJourneyPlan } from "@/lib/journey";
 import AdminLayout from "@/components/AdminLayout";
+
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +52,13 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
   const [editForm, setEditForm] = useState<any>(null);
   const [editError, setEditError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [entryForm, setEntryForm] = useState<any>(null);
+  const [savingEntry, setSavingEntry] = useState(false);
+  const [journeySteps, setJourneySteps] = useState<any[] | null>(null);
+  const [replaceExisting, setReplaceExisting] = useState(true);
+  const [journeyError, setJourneyError] = useState("");
+  const [applyingJourney, setApplyingJourney] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN";
   const isStaff = session?.user?.role === "STAFF" || isAdmin;
@@ -175,6 +189,86 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
       fetchShipment();
     }
     setSavingEdit(false);
+  };
+
+  const startEditEntry = (entry: any) => {
+    setEntryForm({
+      status: entry.status,
+      location: entry.location || "",
+      description: entry.description || "",
+      timestamp: toLocalInput(entry.timestamp),
+    });
+    setEditingEntryId(entry.id);
+  };
+
+  const handleSaveEntry = async (entryId: string) => {
+    setSavingEntry(true);
+    const res = await fetch(`/api/shipments/${id}/history/${entryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: entryForm.status,
+        location: entryForm.location,
+        description: entryForm.description,
+        timestamp: new Date(entryForm.timestamp).toISOString(),
+      }),
+    });
+    setSavingEntry(false);
+    if (res.ok) {
+      setEditingEntryId(null);
+      fetchShipment();
+    }
+  };
+
+  const suggestJourney = () => {
+    if (!shipment?.originBranch || !shipment?.destBranch) return;
+    const end = new Date();
+    const start = new Date(end.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const plan = generateJourneyPlan(shipment.originBranch, shipment.destBranch, { start, end });
+    setJourneySteps(plan.map((s) => ({ ...s, timestamp: toLocalInput(s.timestamp) })));
+    setJourneyError("");
+  };
+
+  const updateJourneyStep = (idx: number, patch: any) => {
+    setJourneySteps((prev) => prev!.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
+
+  const removeJourneyStep = (idx: number) => {
+    setJourneySteps((prev) => prev!.filter((_, i) => i !== idx));
+  };
+
+  const addJourneyStep = () => {
+    setJourneySteps((prev) => [
+      ...(prev || []),
+      { status: "in_transit", location: "", description: "", timestamp: toLocalInput(new Date().toISOString()) },
+    ]);
+  };
+
+  const applyJourney = async () => {
+    if (!journeySteps || journeySteps.length === 0) return;
+    setApplyingJourney(true);
+    setJourneyError("");
+    const res = await fetch(`/api/shipments/${id}/journey`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        replaceExisting,
+        steps: journeySteps.map((s) => ({
+          status: s.status,
+          location: s.location,
+          description: s.description,
+          timestamp: new Date(s.timestamp).toISOString(),
+        })),
+      }),
+    });
+    setApplyingJourney(false);
+    if (!res.ok) {
+      const data = await res.json();
+      setJourneyError(data.error || "Failed to apply journey");
+    } else {
+      setJourneySteps(null);
+      fetchShipment();
+    }
   };
 
   const handleDeleteHistoryEntry = async (entryId: string) => {
@@ -360,38 +454,88 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                         {!isLast && <div className="w-0.5 flex-1 bg-gray-200" style={{ minHeight: "2rem" }} />}
                       </div>
                       <div className={`group flex-1 ${isLast ? "" : "pb-6"}`}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{STATUS_LABELS[entry.status] || entry.status}</span>
-                          <Badge status={entry.status} />
-                          {isAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteHistoryEntry(entry.id)}
-                              className="ml-auto rounded p-1 text-gray-300 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-                              title="Remove this timeline entry"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                        {entry.location && (
-                          <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-                            <MapPin className="h-3.5 w-3.5" />{entry.location}
-                          </p>
+                        {editingEntryId === entry.id && entryForm ? (
+                          <div className="space-y-2 rounded-lg border border-brand-200 bg-brand-50/40 p-3">
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              <Select
+                                value={entryForm.status}
+                                onChange={(e) => setEntryForm({ ...entryForm, status: e.target.value })}
+                              >
+                                {SHIPMENT_STATUSES.map((s) => (
+                                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                                ))}
+                              </Select>
+                              <Input
+                                type="datetime-local"
+                                value={entryForm.timestamp}
+                                onChange={(e) => setEntryForm({ ...entryForm, timestamp: e.target.value })}
+                              />
+                            </div>
+                            <Input
+                              placeholder="Location"
+                              value={entryForm.location}
+                              onChange={(e) => setEntryForm({ ...entryForm, location: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Description"
+                              value={entryForm.description}
+                              onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })}
+                            />
+                            <div className="flex gap-2">
+                              <Button onClick={() => handleSaveEntry(entry.id)} disabled={savingEntry} className="px-3 py-1.5 text-xs">
+                                {savingEntry ? "Saving..." : "Save"}
+                              </Button>
+                              <Button variant="secondary" onClick={() => setEditingEntryId(null)} className="px-3 py-1.5 text-xs">
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{STATUS_LABELS[entry.status] || entry.status}</span>
+                              <Badge status={entry.status} />
+                              {isAdmin && (
+                                <span className="ml-auto flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditEntry(entry)}
+                                    className="rounded p-1 text-gray-300 hover:bg-brand-50 hover:text-brand-600"
+                                    title="Edit this timeline entry"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteHistoryEntry(entry.id)}
+                                    className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600"
+                                    title="Remove this timeline entry"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </span>
+                              )}
+                            </div>
+                            {entry.location && (
+                              <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+                                <MapPin className="h-3.5 w-3.5" />{entry.location}
+                              </p>
+                            )}
+                            {entry.branch?.name && (
+                              <p className="mt-1 text-sm text-gray-500">Branch: {entry.branch.name}</p>
+                            )}
+                            {entry.description && <p className="mt-1 text-sm text-gray-600">{entry.description}</p>}
+                            <p className="mt-1 text-xs text-gray-400">
+                              {formatDate(entry.timestamp)}
+                              {entry.updatedBy && (
+                                <span className="ml-1 inline-flex items-center gap-1">
+                                  <User className="inline h-3 w-3" />
+                                  by {entry.updatedBy.name}
+                                </span>
+                              )}
+                            </p>
+                          </>
                         )}
-                        {entry.branch?.name && (
-                          <p className="mt-1 text-sm text-gray-500">Branch: {entry.branch.name}</p>
-                        )}
-                        {entry.description && <p className="mt-1 text-sm text-gray-600">{entry.description}</p>}
-                        <p className="mt-1 text-xs text-gray-400">
-                          {formatDate(entry.timestamp)}
-                          {entry.updatedBy && (
-                            <span className="ml-1 inline-flex items-center gap-1">
-                              <User className="inline h-3 w-3" />
-                              by {entry.updatedBy.name}
-                            </span>
-                          )}
-                        </p>
                       </div>
                     </div>
                   );
@@ -399,6 +543,106 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
               </div>
             )}
           </Card>
+
+          {isAdmin && (
+            <Card>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                  <Wand2 className="h-5 w-5 text-gray-400" />
+                  Journey Builder
+                </h2>
+                {!journeySteps && (
+                  <Button variant="outline" onClick={suggestJourney}>
+                    <Wand2 className="mr-2 inline h-4 w-4" />
+                    Suggest Route
+                  </Button>
+                )}
+              </div>
+              <p className="mb-4 text-xs text-gray-500">
+                Auto-plans the stops from {shipment.originBranch?.name} to {shipment.destBranch?.name} — including
+                international legs and customs when the branches are in different countries. Every stop is editable
+                (status, location, text, date &amp; time) before you apply it. Remove the steps that haven&apos;t
+                happened yet to show the shipment mid-journey.
+              </p>
+
+              {journeySteps && (
+                <div className="space-y-3">
+                  {journeyError && (
+                    <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{journeyError}</div>
+                  )}
+                  {journeySteps.map((step, idx) => (
+                    <div key={idx} className="rounded-lg border border-gray-200 p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+                          {idx + 1}
+                        </span>
+                        <Select
+                          value={step.status}
+                          onChange={(e) => updateJourneyStep(idx, { status: e.target.value })}
+                          className="max-w-[180px]"
+                        >
+                          {SHIPMENT_STATUSES.map((s) => (
+                            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                          ))}
+                        </Select>
+                        <Input
+                          type="datetime-local"
+                          value={step.timestamp}
+                          onChange={(e) => updateJourneyStep(idx, { timestamp: e.target.value })}
+                          className="max-w-[210px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeJourneyStep(idx)}
+                          className="ml-auto rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600"
+                          title="Remove this stop"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <Input
+                          placeholder="Location"
+                          value={step.location}
+                          onChange={(e) => updateJourneyStep(idx, { location: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Description"
+                          value={step.description}
+                          onChange={(e) => updateJourneyStep(idx, { description: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between">
+                    <Button variant="secondary" onClick={addJourneyStep} className="px-3 py-1.5 text-xs">
+                      <Plus className="mr-1 inline h-3.5 w-3.5" />
+                      Add Stop
+                    </Button>
+                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={replaceExisting}
+                        onChange={(e) => setReplaceExisting(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      Replace existing timeline
+                    </label>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button onClick={applyJourney} disabled={applyingJourney}>
+                      {applyingJourney ? "Applying..." : `Apply Journey (${journeySteps.length} stops)`}
+                    </Button>
+                    <Button variant="outline" onClick={() => setJourneySteps(null)}>
+                      Discard
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
