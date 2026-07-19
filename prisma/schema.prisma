@@ -16,6 +16,8 @@ model User {
   phone        String?
   role         String  @default("CUSTOMER")
   staffRole    String?
+  status       String  @default("active")
+  adminNotes   String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

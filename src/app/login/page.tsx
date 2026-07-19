@@ -27,7 +27,11 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      setError("Invalid email or password");
+      setError(
+        result.error.toLowerCase().includes("suspended")
+          ? "This account has been suspended. Please contact support."
+          : "Invalid email or password"
+      );
       setLoading(false);
     } else {
       router.push(callbackUrl);

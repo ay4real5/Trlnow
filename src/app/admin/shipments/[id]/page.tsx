@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User } from "lucide-react";
+import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User, MessageSquarePlus, Pencil, Save } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS } from "@/lib/utils";
@@ -37,6 +37,14 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
   });
   const [formError, setFormError] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [comment, setComment] = useState("");
+  const [commentLocation, setCommentLocation] = useState("");
+  const [commentError, setCommentError] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<any>(null);
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN";
   const isStaff = session?.user?.role === "STAFF" || isAdmin;
@@ -58,6 +66,8 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
 
   const getAllowedNextStatuses = (currentStatus: string) => {
     if (!currentStatus) return [];
+    // Admins can move a shipment to any other status, including reopening a delivered one
+    if (isAdmin) return [...STATUS_FLOW, "exception"].filter((s) => s !== currentStatus);
     if (currentStatus === "delivered") return [];
     if (currentStatus === "exception") return ["created", "picked_up", "in_transit", "out_for_delivery", "delivered"];
     const index = STATUS_FLOW.indexOf(currentStatus);
@@ -105,6 +115,66 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
     }
     setUpdating(false);
     fetchShipment();
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCommentError("");
+    if (!comment.trim()) {
+      setCommentError("Write a comment first");
+      return;
+    }
+    setPostingComment(true);
+    const res = await fetch(`/api/shipments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ comment: comment.trim(), location: commentLocation.trim() || null }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setCommentError(data.error || "Failed to add comment");
+    } else {
+      setComment("");
+      setCommentLocation("");
+      fetchShipment();
+    }
+    setPostingComment(false);
+  };
+
+  const startEditing = () => {
+    setEditForm({
+      senderName: shipment.senderName || "",
+      senderPhone: shipment.senderPhone || "",
+      senderAddress: shipment.senderAddress || "",
+      recipientName: shipment.recipientName || "",
+      recipientPhone: shipment.recipientPhone || "",
+      recipientAddress: shipment.recipientAddress || "",
+      weight: shipment.weight ?? "",
+      estimatedDelivery: shipment.estimatedDelivery ? shipment.estimatedDelivery.slice(0, 10) : "",
+      originBranchId: shipment.originBranchId || "",
+      destBranchId: shipment.destBranchId || "",
+    });
+    setEditError("");
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError("");
+    setSavingEdit(true);
+    const res = await fetch(`/api/shipments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setEditError(data.error || "Failed to save changes");
+    } else {
+      setEditing(false);
+      fetchShipment();
+    }
+    setSavingEdit(false);
   };
 
   const handleDelete = async () => {
@@ -164,7 +234,81 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Shipment Details</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
+              {isAdmin && !editing && (
+                <Button variant="outline" onClick={startEditing}>
+                  <Pencil className="mr-2 inline h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
+            {editing && editForm ? (
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                {editError && (
+                  <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{editError}</div>
+                )}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Sender Name *</Label>
+                    <Input required value={editForm.senderName} onChange={(e) => setEditForm({ ...editForm, senderName: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Recipient Name *</Label>
+                    <Input required value={editForm.recipientName} onChange={(e) => setEditForm({ ...editForm, recipientName: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Sender Phone</Label>
+                    <Input value={editForm.senderPhone} onChange={(e) => setEditForm({ ...editForm, senderPhone: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Recipient Phone</Label>
+                    <Input value={editForm.recipientPhone} onChange={(e) => setEditForm({ ...editForm, recipientPhone: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Sender Address</Label>
+                    <Input value={editForm.senderAddress} onChange={(e) => setEditForm({ ...editForm, senderAddress: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Recipient Address</Label>
+                    <Input value={editForm.recipientAddress} onChange={(e) => setEditForm({ ...editForm, recipientAddress: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Origin Branch</Label>
+                    <Select value={editForm.originBranchId} onChange={(e) => setEditForm({ ...editForm, originBranchId: e.target.value })}>
+                      {branches.map((b: any) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Destination Branch</Label>
+                    <Select value={editForm.destBranchId} onChange={(e) => setEditForm({ ...editForm, destBranchId: e.target.value })}>
+                      {branches.map((b: any) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Weight (kg)</Label>
+                    <Input type="number" step="0.1" min="0" value={editForm.weight} onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Est. Delivery Date</Label>
+                    <Input type="date" value={editForm.estimatedDelivery} onChange={(e) => setEditForm({ ...editForm, estimatedDelivery: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button type="submit" disabled={savingEdit}>
+                    <Save className="mr-2 inline h-4 w-4" />
+                    {savingEdit ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div><p className="text-gray-400">Sender</p><p className="font-medium">{shipment.senderName}</p></div>
               <div><p className="text-gray-400">Recipient</p><p className="font-medium">{shipment.recipientName}</p></div>
@@ -180,10 +324,16 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
               {shipment.sender?.email && (
                 <div className="col-span-2">
                   <p className="text-gray-400">Registered Customer</p>
-                  <p className="font-medium">{shipment.sender.name} ({shipment.sender.email})</p>
+                  <p className="font-medium">
+                    <Link href={`/admin/customers/${shipment.sender.id}`} className="text-brand-600 hover:underline">
+                      {shipment.sender.name}
+                    </Link>{" "}
+                    ({shipment.sender.email})
+                  </p>
                 </div>
               )}
             </div>
+            )}
           </Card>
 
           <Card>
@@ -235,10 +385,10 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
           </Card>
         </div>
 
-        <div>
+        <div className="space-y-6">
           <Card>
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Update Status</h2>
-            {isDelivered ? (
+            {isDelivered && !isAdmin ? (
               <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
                 <div className="mb-2 flex items-center gap-2 font-medium">
                   <CheckCircle className="h-4 w-4" />
@@ -317,6 +467,43 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
               </div>
             )}
           </Card>
+
+          {isStaff && (
+            <Card>
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <MessageSquarePlus className="h-5 w-5 text-gray-400" />
+                Add Comment
+              </h2>
+              <p className="mb-4 text-xs text-gray-500">
+                Posts an update to the tracking timeline without changing the status. Visible to the customer.
+              </p>
+              <form onSubmit={handleAddComment} className="space-y-4">
+                {commentError && (
+                  <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{commentError}</div>
+                )}
+                <div>
+                  <Label>Comment *</Label>
+                  <Textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="e.g. Package held at customs, awaiting clearance..."
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label>Location (optional)</Label>
+                  <Input
+                    value={commentLocation}
+                    onChange={(e) => setCommentLocation(e.target.value)}
+                    placeholder="e.g. Heathrow Cargo Terminal"
+                  />
+                </div>
+                <Button type="submit" variant="secondary" disabled={postingComment} className="w-full">
+                  {postingComment ? "Posting..." : "Post Comment"}
+                </Button>
+              </form>
+            </Card>
+          )}
         </div>
       </div>
     </AdminLayout>

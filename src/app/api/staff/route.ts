@@ -13,6 +13,16 @@ export async function GET() {
   const staff = await prisma.user.findMany({
     where: { role: { in: ["ADMIN", "STAFF"] } },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      phone: true,
+      role: true,
+      staffRole: true,
+      status: true,
+      createdAt: true,
+    },
   });
   return NextResponse.json(staff);
 }

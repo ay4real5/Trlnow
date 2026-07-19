@@ -40,7 +40,25 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { status, location, description, branchId } = body;
+  const { status, location, description, branchId, comment } = body;
+
+  // Comment-only update: add a timeline entry without changing the status
+  if (!status && typeof comment === "string" && comment.trim()) {
+    const shipment = await prisma.shipment.findUnique({ where: { id: params.id } });
+    if (!shipment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const entry = await prisma.shipmentStatus.create({
+      data: {
+        shipmentId: params.id,
+        status: shipment.status,
+        location: location || null,
+        description: comment.trim(),
+        branchId: branchId || null,
+        updatedByUserId: session.user.id,
+      },
+    });
+    return NextResponse.json(entry);
+  }
 
   if (status) {
     const shipment = await prisma.shipment.update({
@@ -95,9 +113,36 @@ export async function PATCH(
     return NextResponse.json(shipment);
   }
 
+  // Details edit: only allow known editable fields through
+  const data: Record<string, any> = {};
+  const stringFields = [
+    "senderName", "senderPhone", "senderAddress",
+    "recipientName", "recipientPhone", "recipientAddress",
+    "originBranchId", "destBranchId",
+  ];
+  for (const field of stringFields) {
+    if (typeof body[field] === "string") data[field] = body[field].trim() || null;
+  }
+  // Names and branches must not be blanked out
+  for (const required of ["senderName", "recipientName", "originBranchId", "destBranchId"]) {
+    if (required in data && !data[required]) delete data[required];
+  }
+  if (body.weight !== undefined) {
+    const w = Number(body.weight);
+    data.weight = Number.isFinite(w) && w > 0 ? w : null;
+  }
+  if (body.estimatedDelivery !== undefined) {
+    const d = body.estimatedDelivery ? new Date(body.estimatedDelivery) : null;
+    data.estimatedDelivery = d && !Number.isNaN(d.getTime()) ? d : null;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
   const updated = await prisma.shipment.update({
     where: { id: params.id },
-    data: body,
+    data,
   });
   return NextResponse.json(updated);
 }

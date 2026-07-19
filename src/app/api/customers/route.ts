@@ -34,6 +34,15 @@ export async function GET() {
   const customers = await prisma.user.findMany({
     where: { role: "CUSTOMER" },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      phone: true,
+      status: true,
+      createdAt: true,
+      _count: { select: { sentShipments: true } },
+    },
   });
   return NextResponse.json(customers);
 }
