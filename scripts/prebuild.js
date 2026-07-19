@@ -11,6 +11,14 @@ if (process.argv.includes("--push")) {
   if (url.startsWith("postgres") && !url.includes("schema=")) {
     url += (url.includes("?") ? "&" : "?") + "schema=trlnow";
   }
+  if (url.startsWith("postgres") && !url.includes("schema=trlnow")) {
+    console.error(
+      "[prebuild --push] REFUSING to push: postgres URL is missing schema=trlnow. " +
+        "This database is shared with the Abims2026 wedding site (tables in 'public'); " +
+        "pushing without the trlnow schema would drop them."
+    );
+    process.exit(1);
+  }
   const res = spawnSync("prisma", ["db", "push", "--accept-data-loss"], {
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: url },
