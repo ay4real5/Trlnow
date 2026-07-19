@@ -1,7 +1,18 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
+/* Seed into TrlNow's own "trlnow" Postgres schema — the Neon database is
+   shared with the Abims2026 wedding site, whose tables live in "public". */
+function trlnowDatabaseUrl(): string | undefined {
+  const url = process.env.DATABASE_URL;
+  if (!url || !url.startsWith('postgres') || url.includes('schema=')) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'schema=trlnow';
+}
+
+const seedUrl = trlnowDatabaseUrl();
+const seedOptions: Prisma.PrismaClientOptions = {};
+if (seedUrl) seedOptions.datasources = { db: { url: seedUrl } };
+const prisma = new PrismaClient(seedOptions);
 
 const ShipmentStatusEnum = {
   created: 'created',

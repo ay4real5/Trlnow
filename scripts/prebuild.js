@@ -1,6 +1,24 @@
 const fs = require("fs");
 const path = require("path");
 
+/* `--push` mode: run `prisma db push` against TrlNow's own "trlnow" Postgres
+   schema. The Neon database is shared with the Abims2026 wedding site, whose
+   tables live in "public" — pushing there drops them (happened 2026-07-19,
+   wiping the wedding RSVP and blessings tables). Never push to "public". */
+if (process.argv.includes("--push")) {
+  const { spawnSync } = require("child_process");
+  let url = process.env.DATABASE_URL || "";
+  if (url.startsWith("postgres") && !url.includes("schema=")) {
+    url += (url.includes("?") ? "&" : "?") + "schema=trlnow";
+  }
+  const res = spawnSync("prisma", ["db", "push", "--accept-data-loss"], {
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: url },
+    shell: process.platform === "win32",
+  });
+  process.exit(res.status === null ? 1 : res.status);
+}
+
 const schemaPath = path.join(__dirname, "..", "prisma", "schema.prisma");
 let schema = fs.readFileSync(schemaPath, "utf8");
 
