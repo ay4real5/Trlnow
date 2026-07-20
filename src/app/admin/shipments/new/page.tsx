@@ -136,7 +136,7 @@ export default function NewShipmentPage() {
                 <Label>Sender Address</Label>
                 <Input value={form.senderAddress} onChange={(e) => setForm({ ...form, senderAddress: e.target.value })} placeholder="Street address" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label>Origin City *</Label>
                   <Input
@@ -182,7 +182,7 @@ export default function NewShipmentPage() {
                 <Label>Recipient Address</Label>
                 <Input value={form.recipientAddress} onChange={(e) => setForm({ ...form, recipientAddress: e.target.value })} placeholder="Street address" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label>Destination City *</Label>
                   <Input

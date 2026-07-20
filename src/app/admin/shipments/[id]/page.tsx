@@ -339,9 +339,9 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
         Back to Shipments
       </Link>
 
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{shipment.trackingNumber}</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-xl font-bold text-gray-900 sm:text-2xl">{shipment.trackingNumber}</h1>
           <p className="mt-1 text-sm text-gray-500">
             {shipmentOrigin(shipment)} <span className="text-gray-300">→</span> {shipmentDest(shipment)}
           </p>
@@ -356,7 +356,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
           </div>
         </div>
         {isAdmin && (
-          <Button variant="danger" onClick={handleDelete}>
+          <Button variant="danger" onClick={handleDelete} className="self-start sm:self-auto">
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
@@ -459,7 +459,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                 </div>
               </form>
             ) : (
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <div><p className="text-gray-400">Sender</p><p className="font-medium">{shipment.senderName}</p></div>
               <div><p className="text-gray-400">Recipient</p><p className="font-medium">{shipment.recipientName}</p></div>
               <div><p className="text-gray-400">Sender Phone</p><p className="font-medium">{shipment.senderPhone || "—"}</p></div>
@@ -480,7 +480,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
               <div><p className="text-gray-400">Sender Address</p><p className="font-medium">{shipment.senderAddress || "—"}</p></div>
               <div><p className="text-gray-400">Recipient Address</p><p className="font-medium">{shipment.recipientAddress || "—"}</p></div>
               {shipment.sender?.email && (
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <p className="text-gray-400">Registered Customer</p>
                   <p className="font-medium">
                     <Link href={`/admin/customers/${shipment.sender.id}`} className="text-brand-600 hover:underline">
@@ -603,7 +603,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
 
           {isAdmin && (
             <Card>
-              <div className="mb-2 flex items-center justify-between">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                   <Wand2 className="h-5 w-5 text-gray-400" />
                   Journey Builder
@@ -639,25 +639,19 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                   )}
                   {journeySteps.map((step, idx) => (
                     <div key={idx} className="rounded-lg border border-gray-200 p-3">
-                      <div className="mb-2 flex items-center gap-2">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
                           {idx + 1}
                         </span>
                         <Select
                           value={step.status}
                           onChange={(e) => updateJourneyStep(idx, { status: e.target.value })}
-                          className="max-w-[180px]"
+                          className="w-auto min-w-[140px] flex-1 sm:max-w-[180px]"
                         >
                           {SHIPMENT_STATUSES.map((s) => (
                             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                           ))}
                         </Select>
-                        <Input
-                          type="datetime-local"
-                          value={step.timestamp}
-                          onChange={(e) => updateJourneyStep(idx, { timestamp: e.target.value })}
-                          className="max-w-[210px]"
-                        />
                         <button
                           type="button"
                           onClick={() => removeJourneyStep(idx)}
@@ -666,6 +660,12 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                         >
                           <X className="h-4 w-4" />
                         </button>
+                        <Input
+                          type="datetime-local"
+                          value={step.timestamp}
+                          onChange={(e) => updateJourneyStep(idx, { timestamp: e.target.value })}
+                          className="w-full sm:w-auto sm:max-w-[210px]"
+                        />
                       </div>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <Input

@@ -127,18 +127,18 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
         Back to Customers
       </Link>
 
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{customer.name}</h1>
-          <div className="mt-2 flex items-center gap-3 text-sm text-gray-500">
-            <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />{customer.email}</span>
-            {customer.phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{customer.phone}</span>}
-            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />Joined {formatDate(customer.createdAt)}</span>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-xl font-bold text-gray-900 sm:text-2xl">{customer.name}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
+            <span className="flex min-w-0 items-center gap-1.5 break-all"><Mail className="h-3.5 w-3.5 shrink-0" />{customer.email}</span>
+            {customer.phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 shrink-0" />{customer.phone}</span>}
+            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 shrink-0" />Joined {formatDate(customer.createdAt)}</span>
           </div>
         </div>
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium",
+            "inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium",
             suspended ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
           )}
         >
