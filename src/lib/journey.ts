@@ -1,11 +1,18 @@
 // Journey planning: generate a realistic sequence of tracking stops between
-// two branches. Pure functions, safe to use client-side.
+// any two places in the world — a shipment's origin/destination don't have
+// to be one of our own branches. Pure functions, safe to use client-side.
 
 export interface JourneyStep {
   status: string;
   location: string;
   description: string;
   timestamp: string; // ISO
+}
+
+export interface Location {
+  label: string;   // what to show in the timeline for the origin/dest stop
+  city: string;
+  country: string; // "" if unknown — disables international-route detection
 }
 
 interface BranchLike {
@@ -43,18 +50,40 @@ export function countryFromAddress(address?: string | null): string {
   return normalizeCountry(parts[parts.length - 1]);
 }
 
+// Build a routing Location from whichever data the shipment actually has:
+// free-text city/country (any place in the world) takes priority; a linked
+// branch is used as a fallback so older, branch-only shipments still work.
+export function resolveLocation(
+  city?: string | null,
+  country?: string | null,
+  branch?: BranchLike | null
+): Location {
+  if (city && city.trim()) {
+    const c = normalizeCountry((country || "").trim());
+    return {
+      label: c ? `${city.trim()}, ${c}` : city.trim(),
+      city: city.trim(),
+      country: c,
+    };
+  }
+  if (branch) {
+    return {
+      label: branch.name,
+      city: cityFromBranchName(branch.name),
+      country: countryFromAddress(branch.address),
+    };
+  }
+  return { label: "Unknown location", city: "Unknown", country: "" };
+}
+
 export function generateJourneyPlan(
-  origin: BranchLike,
-  dest: BranchLike,
+  origin: Location,
+  dest: Location,
   opts?: { start?: Date; end?: Date }
 ): JourneyStep[] {
-  const originCity = cityFromBranchName(origin.name);
-  const destCity = cityFromBranchName(dest.name);
-  const originCountry = countryFromAddress(origin.address);
-  const destCountry = countryFromAddress(dest.address);
   const international =
-    !!originCountry && !!destCountry &&
-    originCountry.toLowerCase() !== destCountry.toLowerCase();
+    !!origin.country && !!dest.country &&
+    origin.country.toLowerCase() !== dest.country.toLowerCase();
 
   const at = (city: string, country: string) =>
     country ? `${city}, ${country}` : city;
@@ -62,14 +91,14 @@ export function generateJourneyPlan(
   const steps: Omit<JourneyStep, "timestamp">[] = [
     {
       status: "created",
-      location: origin.name,
+      location: origin.label,
       description: international
         ? "Shipment booked - export documentation prepared"
         : "Shipment booked",
     },
     {
       status: "picked_up",
-      location: origin.name,
+      location: origin.label,
       description: "Collected from sender",
     },
   ];
@@ -78,36 +107,36 @@ export function generateJourneyPlan(
     steps.push(
       {
         status: "in_transit",
-        location: `${originCity} International Sorting Facility, ${originCountry}`,
+        location: `${origin.city} International Sorting Facility, ${origin.country}`,
         description: "Processed and dispatched for international linehaul",
       },
       {
         status: "in_transit",
-        location: at(`${originCity} Air Cargo Terminal`, originCountry),
-        description: `Departed ${originCountry}`,
+        location: at(`${origin.city} Air Cargo Terminal`, origin.country),
+        description: `Departed ${origin.country}`,
       },
       {
         status: "in_transit",
-        location: at("Port of entry", destCountry),
-        description: `Arrived in ${destCountry} - customs clearance in progress`,
+        location: at("Port of entry", dest.country),
+        description: `Arrived in ${dest.country} - customs clearance in progress`,
       },
       {
         status: "in_transit",
-        location: at(dest.name, destCountry),
-        description: "Cleared customs - arrived at destination depot",
+        location: at(`${dest.city} Sorting Facility`, dest.country),
+        description: "Cleared customs - arrived at destination facility",
       }
     );
   } else {
     steps.push(
       {
         status: "in_transit",
-        location: at(`${originCity} Sorting Facility`, originCountry),
-        description: `In transit to ${destCity}`,
+        location: at(`${origin.city} Sorting Facility`, origin.country),
+        description: `In transit to ${dest.city}`,
       },
       {
         status: "in_transit",
-        location: at(dest.name, destCountry),
-        description: "Arrived at destination depot",
+        location: at(`${dest.city} Sorting Facility`, dest.country),
+        description: "Arrived at destination facility",
       }
     );
   }
@@ -115,12 +144,12 @@ export function generateJourneyPlan(
   steps.push(
     {
       status: "out_for_delivery",
-      location: at(destCity, destCountry),
+      location: dest.label,
       description: "Loaded on delivery vehicle - out for delivery",
     },
     {
       status: "delivered",
-      location: at(destCity, destCountry),
+      location: dest.label,
       description: "Delivered to recipient",
     }
   );

@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { Package, Search } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Table, Th, Td, EmptyState } from "@/components/ui";
-import { formatDate } from "@/lib/utils";
+import { formatDate, shipmentDest } from "@/lib/utils";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function DashboardContent() {
@@ -77,7 +77,7 @@ function DashboardContent() {
                   </Link>
                 </Td>
                 <Td>{s.recipientName}</Td>
-                <Td>{s.destBranch?.name}</Td>
+                <Td>{shipmentDest(s)}</Td>
                 <Td><Badge status={s.status} /></Td>
                 <Td>{formatDate(s.createdAt)}</Td>
                 <Td>{formatDate(s.estimatedDelivery)}</Td>

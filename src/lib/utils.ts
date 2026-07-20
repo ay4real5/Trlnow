@@ -32,6 +32,28 @@ export function normalizeTrackingNumber(input: string): string {
   return cleaned;
 }
 
+// Shipments can now route between any two places in the world (free-text
+// city/country), not just a registered Branch. This is the single place that
+// decides what to show for "origin"/"destination" — prefer the free-text
+// location, fall back to a linked branch's name for older records.
+export function locationLabel(
+  city?: string | null,
+  country?: string | null,
+  branchName?: string | null
+): string {
+  if (city) return country ? `${city}, ${country}` : city;
+  if (branchName) return branchName;
+  return "—";
+}
+
+export function shipmentOrigin(s: { originCity?: string | null; originCountry?: string | null; originBranch?: { name: string } | null }): string {
+  return locationLabel(s.originCity, s.originCountry, s.originBranch?.name);
+}
+
+export function shipmentDest(s: { destCity?: string | null; destCountry?: string | null; destBranch?: { name: string } | null }): string {
+  return locationLabel(s.destCity, s.destCountry, s.destBranch?.name);
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;

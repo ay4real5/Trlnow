@@ -50,8 +50,18 @@ model Shipment {
   recipientName     String
   recipientPhone    String?
   recipientAddress  String?
-  originBranchId    String
-  destBranchId      String
+  // Free-text route: a shipment can move between any two places in the
+  // world, not just registered Branch records. City is the source of truth
+  // for display and for the Journey Builder's route-smarts; country drives
+  // the domestic-vs-international routing logic.
+  originCity        String?
+  originCountry     String?
+  destCity          String?
+  destCountry       String?
+  // Optional link to one of our own branches, if this shipment's origin
+  // and/or destination happens to be one of our facilities. Never required.
+  originBranchId    String?
+  destBranchId      String?
   weight            Float?
   status            String @default("created")
   createdAt         DateTime           @default(now())
@@ -59,8 +69,8 @@ model Shipment {
   estimatedDelivery DateTime?
 
   sender       User?           @relation("SenderShipments", fields: [senderId], references: [id], onDelete: SetNull)
-  originBranch Branch          @relation("OriginBranch", fields: [originBranchId], references: [id], onDelete: Restrict)
-  destBranch   Branch          @relation("DestBranch", fields: [destBranchId], references: [id], onDelete: Restrict)
+  originBranch Branch?         @relation("OriginBranch", fields: [originBranchId], references: [id], onDelete: SetNull)
+  destBranch   Branch?         @relation("DestBranch", fields: [destBranchId], references: [id], onDelete: SetNull)
   statusHistory ShipmentStatus[]
   notifications  Notification[]
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle, Circle, Package, Truck, MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button } from "@/components/ui";
-import { formatDate, STATUS_LABELS, normalizeTrackingNumber } from "@/lib/utils";
+import { formatDate, STATUS_LABELS, normalizeTrackingNumber, shipmentOrigin, shipmentDest } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -102,11 +102,11 @@ export default function TrackResultPage({
         <div className="mt-6 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 text-sm sm:grid-cols-4">
           <div>
             <p className="text-gray-400">From</p>
-            <p className="font-medium text-gray-900">{shipment.originBranch?.name}</p>
+            <p className="font-medium text-gray-900">{shipmentOrigin(shipment)}</p>
           </div>
           <div>
             <p className="text-gray-400">To</p>
-            <p className="font-medium text-gray-900">{shipment.destBranch?.name}</p>
+            <p className="font-medium text-gray-900">{shipmentDest(shipment)}</p>
           </div>
           <div>
             <p className="text-gray-400">Recipient</p>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Search, Package } from "lucide-react";
 import { Card, Badge, Button, Input, Select, Table, Th, Td, EmptyState } from "@/components/ui";
-import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, normalizeTrackingNumber } from "@/lib/utils";
+import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, normalizeTrackingNumber, shipmentOrigin, shipmentDest } from "@/lib/utils";
 import AdminLayout from "@/components/AdminLayout";
 
 export default function AdminShipmentsPage() {
@@ -113,7 +113,7 @@ export default function AdminShipmentsPage() {
                 </Td>
                 <Td>{s.senderName}</Td>
                 <Td>{s.recipientName}</Td>
-                <Td className="text-xs">{s.originBranch?.name} → {s.destBranch?.name}</Td>
+                <Td className="text-xs">{shipmentOrigin(s)} → {shipmentDest(s)}</Td>
                 <Td><Badge status={s.status} /></Td>
                 <Td>{s.weight ? `${s.weight}kg` : "—"}</Td>
                 <Td>{formatDate(s.createdAt)}</Td>

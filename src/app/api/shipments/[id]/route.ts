@@ -118,14 +118,21 @@ export async function PATCH(
   const stringFields = [
     "senderName", "senderPhone", "senderAddress",
     "recipientName", "recipientPhone", "recipientAddress",
-    "originBranchId", "destBranchId",
+    "originCity", "originCountry", "destCity", "destCountry",
   ];
   for (const field of stringFields) {
     if (typeof body[field] === "string") data[field] = body[field].trim() || null;
   }
-  // Names and branches must not be blanked out
-  for (const required of ["senderName", "recipientName", "originBranchId", "destBranchId"]) {
+  // Names and city are the only required text fields — never blank them out
+  for (const required of ["senderName", "recipientName", "originCity", "destCity"]) {
     if (required in data && !data[required]) delete data[required];
+  }
+  // Branch links are optional either way — "" clears the link, a real id sets it
+  if (typeof body.originBranchId === "string") {
+    data.originBranchId = body.originBranchId.trim() || null;
+  }
+  if (typeof body.destBranchId === "string") {
+    data.destBranchId = body.destBranchId.trim() || null;
   }
   if (body.weight !== undefined) {
     const w = Number(body.weight);
@@ -138,6 +145,13 @@ export async function PATCH(
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
+  for (const [field, branchId] of [["originBranchId", data.originBranchId], ["destBranchId", data.destBranchId]] as const) {
+    if (field in data && branchId) {
+      const b = await prisma.branch.findUnique({ where: { id: branchId } });
+      if (!b) return NextResponse.json({ error: `${field === "originBranchId" ? "Origin" : "Destination"} branch not found` }, { status: 400 });
+    }
   }
 
   const updated = await prisma.shipment.update({

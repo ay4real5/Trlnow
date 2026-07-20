@@ -6,8 +6,8 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User, MessageSquarePlus, Pencil, Save, Wand2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Label, Select, Textarea } from "@/components/ui";
-import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS } from "@/lib/utils";
-import { generateJourneyPlan } from "@/lib/journey";
+import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, shipmentOrigin, shipmentDest } from "@/lib/utils";
+import { generateJourneyPlan, resolveLocation } from "@/lib/journey";
 import AdminLayout from "@/components/AdminLayout";
 
 const toLocalInput = (iso: string) => {
@@ -165,7 +165,11 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
       recipientAddress: shipment.recipientAddress || "",
       weight: shipment.weight ?? "",
       estimatedDelivery: shipment.estimatedDelivery ? shipment.estimatedDelivery.slice(0, 10) : "",
+      originCity: shipment.originCity || "",
+      originCountry: shipment.originCountry || "",
       originBranchId: shipment.originBranchId || "",
+      destCity: shipment.destCity || "",
+      destCountry: shipment.destCountry || "",
       destBranchId: shipment.destBranchId || "",
     });
     setEditError("");
@@ -221,10 +225,12 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
   };
 
   const suggestJourney = () => {
-    if (!shipment?.originBranch || !shipment?.destBranch) return;
+    if (!shipment) return;
+    const origin = resolveLocation(shipment.originCity, shipment.originCountry, shipment.originBranch);
+    const dest = resolveLocation(shipment.destCity, shipment.destCountry, shipment.destBranch);
     const end = new Date();
     const start = new Date(end.getTime() - 2 * 24 * 60 * 60 * 1000);
-    const plan = generateJourneyPlan(shipment.originBranch, shipment.destBranch, { start, end });
+    const plan = generateJourneyPlan(origin, dest, { start, end });
     setJourneySteps(plan.map((s) => ({ ...s, timestamp: toLocalInput(s.timestamp) })));
     setJourneyError("");
   };
@@ -313,6 +319,9 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{shipment.trackingNumber}</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {shipmentOrigin(shipment)} <span className="text-gray-300">→</span> {shipmentDest(shipment)}
+          </p>
           <div className="mt-2 flex items-center gap-2">
             <Badge status={shipment.status} />
             {isDelivered && (
@@ -374,16 +383,34 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                     <Input value={editForm.recipientAddress} onChange={(e) => setEditForm({ ...editForm, recipientAddress: e.target.value })} />
                   </div>
                   <div>
-                    <Label>Origin Branch</Label>
+                    <Label>Origin City *</Label>
+                    <Input required value={editForm.originCity} onChange={(e) => setEditForm({ ...editForm, originCity: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Destination City *</Label>
+                    <Input required value={editForm.destCity} onChange={(e) => setEditForm({ ...editForm, destCity: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Origin Country</Label>
+                    <Input value={editForm.originCountry} onChange={(e) => setEditForm({ ...editForm, originCountry: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Destination Country</Label>
+                    <Input value={editForm.destCountry} onChange={(e) => setEditForm({ ...editForm, destCountry: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Link Origin to Branch (optional)</Label>
                     <Select value={editForm.originBranchId} onChange={(e) => setEditForm({ ...editForm, originBranchId: e.target.value })}>
+                      <option value="">— None, custom location —</option>
                       {branches.map((b: any) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </Select>
                   </div>
                   <div>
-                    <Label>Destination Branch</Label>
+                    <Label>Link Destination to Branch (optional)</Label>
                     <Select value={editForm.destBranchId} onChange={(e) => setEditForm({ ...editForm, destBranchId: e.target.value })}>
+                      <option value="">— None, custom location —</option>
                       {branches.map((b: any) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
@@ -414,8 +441,16 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
               <div><p className="text-gray-400">Recipient</p><p className="font-medium">{shipment.recipientName}</p></div>
               <div><p className="text-gray-400">Sender Phone</p><p className="font-medium">{shipment.senderPhone || "—"}</p></div>
               <div><p className="text-gray-400">Recipient Phone</p><p className="font-medium">{shipment.recipientPhone || "—"}</p></div>
-              <div><p className="text-gray-400">Origin Branch</p><p className="font-medium">{shipment.originBranch?.name}</p></div>
-              <div><p className="text-gray-400">Destination Branch</p><p className="font-medium">{shipment.destBranch?.name}</p></div>
+              <div>
+                <p className="text-gray-400">Origin</p>
+                <p className="font-medium">{shipmentOrigin(shipment)}</p>
+                {shipment.originBranch?.name && <p className="text-xs text-gray-400">Branch: {shipment.originBranch.name}</p>}
+              </div>
+              <div>
+                <p className="text-gray-400">Destination</p>
+                <p className="font-medium">{shipmentDest(shipment)}</p>
+                {shipment.destBranch?.name && <p className="text-xs text-gray-400">Branch: {shipment.destBranch.name}</p>}
+              </div>
               <div><p className="text-gray-400">Weight</p><p className="font-medium">{shipment.weight ? `${shipment.weight}kg` : "—"}</p></div>
               <div><p className="text-gray-400">Est. Delivery</p><p className="font-medium">{formatDate(shipment.estimatedDelivery)}</p></div>
               <div><p className="text-gray-400">Created</p><p className="font-medium">{formatDate(shipment.createdAt)}</p></div>
@@ -559,8 +594,8 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                 )}
               </div>
               <p className="mb-4 text-xs text-gray-500">
-                Auto-plans the stops from {shipment.originBranch?.name} to {shipment.destBranch?.name} — including
-                international legs and customs when the branches are in different countries. Every stop is editable
+                Auto-plans the stops from {shipmentOrigin(shipment)} to {shipmentDest(shipment)} — including
+                international legs and customs whenever the two countries differ. Every stop is editable
                 (status, location, text, date &amp; time) before you apply it. Remove the steps that haven&apos;t
                 happened yet to show the shipment mid-journey.
               </p>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Package, Truck, CheckCircle, AlertCircle, Building2, Users } from "lucide-react";
 import { Card, Badge, Table, Th, Td } from "@/components/ui";
-import { formatDate } from "@/lib/utils";
+import { formatDate, shipmentOrigin, shipmentDest } from "@/lib/utils";
 import AdminLayout from "@/components/AdminLayout";
 import Link from "next/link";
 
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
                       </Td>
                       <Td>{s.senderName}</Td>
                       <Td>{s.recipientName}</Td>
-                      <Td>{s.originBranch?.name} → {s.destBranch?.name}</Td>
+                      <Td>{shipmentOrigin(s)} → {shipmentDest(s)}</Td>
                       <Td><Badge status={s.status} /></Td>
                       <Td>{formatDate(s.createdAt)}</Td>
                     </tr>

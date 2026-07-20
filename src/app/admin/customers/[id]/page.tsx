@@ -9,7 +9,7 @@ import {
   Ban, CheckCircle, Save, Shield, StickyNote, Bell,
 } from "lucide-react";
 import { Card, Badge, Button, Input, Label, Table, Th, Td, Textarea, EmptyState } from "@/components/ui";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, cn, shipmentOrigin, shipmentDest } from "@/lib/utils";
 import AdminLayout from "@/components/AdminLayout";
 
 export const dynamic = "force-dynamic";
@@ -186,7 +186,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                         </Link>
                       </Td>
                       <Td>{s.recipientName}</Td>
-                      <Td className="text-xs">{s.originBranch?.name} → {s.destBranch?.name}</Td>
+                      <Td className="text-xs">{shipmentOrigin(s)} → {shipmentDest(s)}</Td>
                       <Td><Badge status={s.status} /></Td>
                       <Td>{formatDate(s.createdAt)}</Td>
                     </tr>

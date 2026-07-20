@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { shipmentOrigin, shipmentDest } from "@/lib/utils";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -38,8 +39,8 @@ export async function GET(req: Request) {
       s.trackingNumber,
       s.senderName,
       s.recipientName,
-      s.originBranch.name,
-      s.destBranch.name,
+      shipmentOrigin(s),
+      shipmentDest(s),
       s.status,
       s.weight?.toString() || "",
       s.createdAt.toISOString(),
