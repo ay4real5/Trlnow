@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle, Circle, Package, Truck, MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button } from "@/components/ui";
-import { formatDate, STATUS_LABELS, normalizeTrackingNumber, shipmentOrigin, shipmentDest } from "@/lib/utils";
+import { formatDate, STATUS_LABELS, STATUS_COLORS, STATUS_SOLID, normalizeTrackingNumber, shipmentOrigin, shipmentDest } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +131,7 @@ export default function TrackResultPage({
               return (
                 <div key={entry.id} className="flex gap-4">
                   <div className="flex flex-col items-center">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isLast ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-500"}`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isLast ? (STATUS_SOLID[entry.status] || "bg-brand-600 text-white") : (STATUS_COLORS[entry.status] || "bg-gray-100 text-gray-500")}`}>
                       <Icon className="h-5 w-5" />
                     </div>
                     {!isLast && <div className="h-full w-0.5 flex-1 bg-gray-200" style={{ minHeight: "2rem" }} />}
@@ -141,12 +141,10 @@ export default function TrackResultPage({
                       <span className="font-medium text-gray-900">{STATUS_LABELS[entry.status] || entry.status}</span>
                       <Badge status={entry.status} />
                     </div>
-                    {entry.location && (
-                      <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {entry.location}
-                      </p>
-                    )}
+                    <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {entry.location || <span className="italic text-gray-400">Location not recorded</span>}
+                    </p>
                     {entry.description && <p className="mt-1 text-sm text-gray-600">{entry.description}</p>}
                     <p className="mt-1 text-xs text-gray-400">{formatDate(entry.timestamp)}</p>
                   </div>

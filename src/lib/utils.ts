@@ -91,11 +91,24 @@ export const STATUS_LABELS: Record<string, string> = {
   exception: "Exception",
 };
 
+// Badge colors — one distinct, clearly-visible hue per status.
 export const STATUS_COLORS: Record<string, string> = {
-  created: "bg-gray-100 text-gray-700",
-  picked_up: "bg-blue-100 text-blue-700",
-  in_transit: "bg-indigo-100 text-indigo-700",
-  out_for_delivery: "bg-amber-100 text-amber-700",
-  delivered: "bg-green-100 text-green-700",
-  exception: "bg-red-100 text-red-700",
+  created: "bg-gray-200 text-gray-700",
+  picked_up: "bg-blue-200 text-blue-800",
+  in_transit: "bg-indigo-200 text-indigo-800",
+  out_for_delivery: "bg-amber-200 text-amber-800",
+  delivered: "bg-green-200 text-green-800",
+  exception: "bg-red-200 text-red-800",
+};
+
+// Solid version of the same hues, for the timeline's "current step" marker —
+// same color family as STATUS_COLORS so a status is instantly recognizable
+// whether it's the current step (solid fill) or a past one (light tint).
+export const STATUS_SOLID: Record<string, string> = {
+  created: "bg-gray-500 text-white",
+  picked_up: "bg-blue-600 text-white",
+  in_transit: "bg-indigo-600 text-white",
+  out_for_delivery: "bg-amber-600 text-white",
+  delivered: "bg-green-600 text-white",
+  exception: "bg-red-600 text-white",
 };

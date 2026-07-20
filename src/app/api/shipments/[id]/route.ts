@@ -61,11 +61,8 @@ export async function PATCH(
   }
 
   if (status) {
-    const shipment = await prisma.shipment.update({
-      where: { id: params.id },
-      data: { status },
-      include: { sender: true },
-    });
+    const existing = await prisma.shipment.findUnique({ where: { id: params.id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     await prisma.shipmentStatus.create({
       data: {
@@ -76,6 +73,21 @@ export async function PATCH(
         branchId: branchId || null,
         updatedByUserId: session.user.id,
       },
+    });
+
+    // The shipment's headline status always mirrors whichever timeline entry
+    // is chronologically latest — not necessarily the one just added, since
+    // a manual update can land earlier than an already-recorded future stop
+    // (e.g. a Journey Builder plan dated ahead of "now"). Same convention as
+    // the journey-apply and timeline-entry edit/delete endpoints.
+    const latest = await prisma.shipmentStatus.findFirst({
+      where: { shipmentId: params.id },
+      orderBy: { timestamp: "desc" },
+    });
+    const shipment = await prisma.shipment.update({
+      where: { id: params.id },
+      data: { status: latest?.status ?? status },
+      include: { sender: true },
     });
 
     if (shipment.sender?.email) {

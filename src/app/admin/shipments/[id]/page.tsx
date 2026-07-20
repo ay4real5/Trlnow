@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User, MessageSquarePlus, Pencil, Save, Wand2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { Card, Badge, Button, Input, Label, Select, Textarea } from "@/components/ui";
-import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, shipmentOrigin, shipmentDest } from "@/lib/utils";
+import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_SOLID, shipmentOrigin, shipmentDest } from "@/lib/utils";
 import { generateJourneyPlan, resolveLocation } from "@/lib/journey";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -506,7 +506,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                   return (
                     <div key={entry.id} className="flex gap-4">
                       <div className="flex flex-col items-center">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isLast ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-500"}`}>
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isLast ? (STATUS_SOLID[entry.status] || "bg-brand-600 text-white") : (STATUS_COLORS[entry.status] || "bg-gray-100 text-gray-500")}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         {!isLast && <div className="w-0.5 flex-1 bg-gray-200" style={{ minHeight: "2rem" }} />}
@@ -574,11 +574,10 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                                 </span>
                               )}
                             </div>
-                            {entry.location && (
-                              <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-                                <MapPin className="h-3.5 w-3.5" />{entry.location}
-                              </p>
-                            )}
+                            <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {entry.location || <span className="italic text-gray-400">Location not recorded</span>}
+                            </p>
                             {entry.branch?.name && (
                               <p className="mt-1 text-sm text-gray-500">Branch: {entry.branch.name}</p>
                             )}
