@@ -32,6 +32,13 @@ export function normalizeTrackingNumber(input: string): string {
   return cleaned;
 }
 
+// Display-only cosmetic fix for admins typing "hamburg" instead of "Hamburg" —
+// capitalizes the first letter of each word, leaving already-uppercase
+// letters (acronyms like "USA", "UK") untouched. Never applied to stored data.
+function capitalizeWords(s: string): string {
+  return s.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+}
+
 // Shipments can now route between any two places in the world (free-text
 // city/country), not just a registered Branch. This is the single place that
 // decides what to show for "origin"/"destination" — prefer the free-text
@@ -41,7 +48,7 @@ export function locationLabel(
   country?: string | null,
   branchName?: string | null
 ): string {
-  if (city) return country ? `${city}, ${country}` : city;
+  if (city) return capitalizeWords(country ? `${city}, ${country}` : city);
   if (branchName) return branchName;
   return "—";
 }

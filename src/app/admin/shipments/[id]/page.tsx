@@ -59,6 +59,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
   const [replaceExisting, setReplaceExisting] = useState(true);
   const [journeyError, setJourneyError] = useState("");
   const [applyingJourney, setApplyingJourney] = useState(false);
+  const [routeChangedNotice, setRouteChangedNotice] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN";
   const isStaff = session?.user?.role === "STAFF" || isAdmin;
@@ -180,6 +181,12 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
     e.preventDefault();
     setEditError("");
     setSavingEdit(true);
+    const routeChanged =
+      editForm.originCity !== (shipment.originCity || "") ||
+      editForm.originCountry !== (shipment.originCountry || "") ||
+      editForm.destCity !== (shipment.destCity || "") ||
+      editForm.destCountry !== (shipment.destCountry || "");
+
     const res = await fetch(`/api/shipments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -190,6 +197,21 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
       setEditError(data.error || "Failed to save changes");
     } else {
       setEditing(false);
+      // Editing the route only changes where the shipment is going, not the
+      // tracking history already recorded — that history described the OLD
+      // route and would be wrong left as-is. Pre-fill a fresh journey (with
+      // "replace existing" on) so it's one click to bring the timeline in
+      // sync, instead of silently leaving stale stops on the page.
+      if (routeChanged) {
+        const origin = resolveLocation(editForm.originCity, editForm.originCountry, null);
+        const dest = resolveLocation(editForm.destCity, editForm.destCountry, null);
+        const end = new Date();
+        const start = new Date(end.getTime() - 2 * 24 * 60 * 60 * 1000);
+        const plan = generateJourneyPlan(origin, dest, { start, end });
+        setJourneySteps(plan.map((s) => ({ ...s, timestamp: toLocalInput(s.timestamp) })));
+        setReplaceExisting(true);
+        setRouteChangedNotice(true);
+      }
       fetchShipment();
     }
     setSavingEdit(false);
@@ -273,6 +295,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
       setJourneyError(data.error || "Failed to apply journey");
     } else {
       setJourneySteps(null);
+      setRouteChangedNotice(false);
       fetchShipment();
     }
   };
@@ -531,11 +554,11 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                               <span className="font-medium text-gray-900">{STATUS_LABELS[entry.status] || entry.status}</span>
                               <Badge status={entry.status} />
                               {isAdmin && (
-                                <span className="ml-auto flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                                <span className="ml-auto flex items-center">
                                   <button
                                     type="button"
                                     onClick={() => startEditEntry(entry)}
-                                    className="rounded p-1 text-gray-300 hover:bg-brand-50 hover:text-brand-600"
+                                    className="rounded p-1 text-gray-400 hover:bg-brand-50 hover:text-brand-600"
                                     title="Edit this timeline entry"
                                   >
                                     <Pencil className="h-4 w-4" />
@@ -543,7 +566,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteHistoryEntry(entry.id)}
-                                    className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-600"
+                                    className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
                                     title="Remove this timeline entry"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -593,12 +616,22 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                   </Button>
                 )}
               </div>
-              <p className="mb-4 text-xs text-gray-500">
-                Auto-plans the stops from {shipmentOrigin(shipment)} to {shipmentDest(shipment)} — including
-                international legs and customs whenever the two countries differ. Every stop is editable
-                (status, location, text, date &amp; time) before you apply it. Remove the steps that haven&apos;t
-                happened yet to show the shipment mid-journey.
-              </p>
+              {routeChangedNotice ? (
+                <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  You changed the route — the tracking timeline below still described the old one, so
+                  it&apos;s pre-filled with a fresh journey for {shipmentOrigin(shipment)} → {shipmentDest(shipment)}.
+                  Review the stops and click <strong>Apply Journey</strong> to make the timeline match, or
+                  Discard to leave the old history as-is.
+                </div>
+              ) : (
+                <p className="mb-4 text-xs text-gray-500">
+                  Auto-plans the stops from {shipmentOrigin(shipment)} to {shipmentDest(shipment)} — including
+                  international legs and customs whenever the two countries differ. Every stop is editable
+                  (status, location, text, date &amp; time) before you apply it. Remove the steps that haven&apos;t
+                  happened yet to show the shipment mid-journey. Note: editing the route in Shipment Details
+                  does not rewrite existing timeline entries — use this builder to bring them in sync.
+                </p>
+              )}
 
               {journeySteps && (
                 <div className="space-y-3">
@@ -670,7 +703,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                     <Button onClick={applyJourney} disabled={applyingJourney}>
                       {applyingJourney ? "Applying..." : `Apply Journey (${journeySteps.length} stops)`}
                     </Button>
-                    <Button variant="outline" onClick={() => setJourneySteps(null)}>
+                    <Button variant="outline" onClick={() => { setJourneySteps(null); setRouteChangedNotice(false); }}>
                       Discard
                     </Button>
                   </div>
