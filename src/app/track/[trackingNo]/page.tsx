@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle, Circle, Package, Truck, MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Card, Badge, Button } from "@/components/ui";
+import { Card, Badge, Button, ShipmentStepper } from "@/components/ui";
 import { formatDate, STATUS_LABELS, STATUS_COLORS, STATUS_SOLID, normalizeTrackingNumber, shipmentOrigin, shipmentDest } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -98,6 +98,9 @@ export default function TrackResultPage({
             <h1 className="text-2xl font-bold text-gray-900">{shipment.trackingNumber}</h1>
           </div>
           <Badge status={shipment.status} className="text-sm" />
+        </div>
+        <div className="mt-6 border-t border-gray-100 pt-6">
+          <ShipmentStepper status={shipment.status} />
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 text-sm sm:grid-cols-4">
           <div>

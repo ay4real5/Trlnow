@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Trash2, Shield, User, MessageSquarePlus, Pencil, Save, Wand2, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { Card, Badge, Button, Input, Label, Select, Textarea } from "@/components/ui";
+import { Card, Badge, Button, Input, Label, Select, Textarea, ShipmentStepper } from "@/components/ui";
 import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_SOLID, shipmentOrigin, shipmentDest } from "@/lib/utils";
 import { generateJourneyPlan, resolveLocation } from "@/lib/journey";
 import AdminLayout from "@/components/AdminLayout";
@@ -362,6 +362,10 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
           </Button>
         )}
       </div>
+
+      <Card className="mb-6">
+        <ShipmentStepper status={shipment.status} />
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
