@@ -44,22 +44,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
+  // Editing a past entry corrects history — it does not change the
+  // shipment's current headline status. Use "Update Status" (or the Journey
+  // Builder) to change what the shipment's status actually is right now.
   const updated = await prisma.shipmentStatus.update({
     where: { id: params.historyId },
     data,
   });
-
-  // Keep the shipment's headline status in sync with the latest timeline entry
-  const latest = await prisma.shipmentStatus.findFirst({
-    where: { shipmentId: params.id },
-    orderBy: { timestamp: "desc" },
-  });
-  if (latest) {
-    await prisma.shipment.update({
-      where: { id: params.id },
-      data: { status: latest.status },
-    });
-  }
 
   return NextResponse.json(updated);
 }
@@ -80,18 +71,9 @@ export async function DELETE(
     return NextResponse.json({ error: "Timeline entry not found" }, { status: 404 });
   }
 
+  // Removing a past entry corrects history — it does not change the
+  // shipment's current headline status.
   await prisma.shipmentStatus.delete({ where: { id: params.historyId } });
-
-  const latest = await prisma.shipmentStatus.findFirst({
-    where: { shipmentId: params.id },
-    orderBy: { timestamp: "desc" },
-  });
-  if (latest) {
-    await prisma.shipment.update({
-      where: { id: params.id },
-      data: { status: latest.status },
-    });
-  }
 
   return NextResponse.json({ success: true });
 }
