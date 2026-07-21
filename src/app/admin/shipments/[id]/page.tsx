@@ -7,7 +7,7 @@ import { ArrowLeft, CheckCircle, Circle, MapPin, Truck, Package, AlertCircle, Tr
 import Link from "next/link";
 import { Card, Badge, Button, Input, Label, Select, Textarea, ShipmentStepper } from "@/components/ui";
 import { formatDate, SHIPMENT_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_SOLID, shipmentOrigin, shipmentDest } from "@/lib/utils";
-import { generateJourneyPlan, resolveLocation } from "@/lib/journey";
+import { generateJourneyPlan, resolveLocation, suggestStatusLocation } from "@/lib/journey";
 import AdminLayout from "@/components/AdminLayout";
 
 const toLocalInput = (iso: string) => {
@@ -88,6 +88,26 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
     const index = STATUS_FLOW.indexOf(currentStatus);
     const next = STATUS_FLOW.slice(index + 1);
     return [...next, "exception"];
+  };
+
+  // Picking a status here should be as smart as the Journey Builder: auto-fill
+  // a sensible location/description for that stage of the actual route,
+  // instead of leaving the admin to type one or submitting with none at all.
+  const handleNextStatusChange = (status: string) => {
+    if (!status || !shipment || status === "exception") {
+      setUpdateForm((f) => ({ ...f, status, location: "", description: "" }));
+      return;
+    }
+    const origin = resolveLocation(shipment.originCity, shipment.originCountry, shipment.originBranch);
+    const dest = resolveLocation(shipment.destCity, shipment.destCountry, shipment.destBranch);
+    const alreadyRecorded = (shipment.statusHistory || []).filter((h: any) => h.status === status).length;
+    const suggestion = suggestStatusLocation(origin, dest, status, alreadyRecorded);
+    setUpdateForm((f) => ({
+      ...f,
+      status,
+      location: suggestion.location,
+      description: suggestion.description,
+    }));
   };
 
   const handleStatusUpdate = async (e: React.FormEvent) => {
@@ -744,7 +764,7 @@ export default function ShipmentDetailPage({ params }: { params: { id: string } 
                   <Select
                     required
                     value={updateForm.status}
-                    onChange={(e) => setUpdateForm({ ...updateForm, status: e.target.value })}
+                    onChange={(e) => handleNextStatusChange(e.target.value)}
                   >
                     <option value="">— Select next status —</option>
                     {allowedNextStatuses.map((s) => (

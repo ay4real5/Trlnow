@@ -4,6 +4,21 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, shipmentStatusEmail } from "@/lib/notifications";
 
+// Quick single-step updates (status change, comment) should always land
+// after everything already on the timeline — never "now" blindly, since a
+// Journey Builder plan can legitimately have future-dated stops recorded
+// ahead of time. Without this, a real-time update can render ABOVE an
+// already-recorded later stop, reading as if events happened out of order.
+async function nextTimestamp(shipmentId: string): Promise<Date> {
+  const latest = await prisma.shipmentStatus.findFirst({
+    where: { shipmentId },
+    orderBy: { timestamp: "desc" },
+  });
+  const now = new Date();
+  if (!latest || latest.timestamp.getTime() < now.getTime()) return now;
+  return new Date(latest.timestamp.getTime() + 60_000);
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: { id: string } }
@@ -58,6 +73,7 @@ export async function PATCH(
         description: comment.trim(),
         branchId: branchId || null,
         updatedByUserId: session.user.id,
+        timestamp: await nextTimestamp(params.id),
       },
     });
     return NextResponse.json(entry);
@@ -84,6 +100,7 @@ export async function PATCH(
         description: description || null,
         branchId: branchId || null,
         updatedByUserId: session.user.id,
+        timestamp: await nextTimestamp(params.id),
       },
     });
 

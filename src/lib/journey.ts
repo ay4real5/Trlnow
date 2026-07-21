@@ -165,3 +165,23 @@ export function generateJourneyPlan(
     timestamp: new Date(start.getTime() + gap * i).toISOString(),
   }));
 }
+
+// A single status can cover several route sub-stages (e.g. "in_transit"
+// spans sorting facility -> air cargo -> customs -> destination facility for
+// an international route). Suggests a sensible location/description for a
+// quick single-step status update, using the same route logic as the full
+// Journey Builder plan. `alreadyRecorded` is how many timeline entries this
+// shipment already has with this exact status — pass it in so repeated
+// updates progress through the sub-stages instead of repeating the first one.
+export function suggestStatusLocation(
+  origin: Location,
+  dest: Location,
+  status: string,
+  alreadyRecorded = 0
+): { location: string; description: string } {
+  const plan = generateJourneyPlan(origin, dest);
+  const matches = plan.filter((s) => s.status === status);
+  if (matches.length === 0) return { location: "", description: "" };
+  const step = matches[Math.min(alreadyRecorded, matches.length - 1)];
+  return { location: step.location, description: step.description };
+}
