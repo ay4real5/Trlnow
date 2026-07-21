@@ -87,12 +87,6 @@ function LoginForm() {
           Register
         </a>
       </p>
-
-      <div className="mt-6 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
-        <p className="font-medium">Demo accounts:</p>
-        <p>Customer: customer@trlnow.com / customer123</p>
-        <p>Admin: admin@trlnow.com / admin123</p>
-      </div>
     </Card>
   );
 }

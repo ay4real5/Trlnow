@@ -1,11 +1,73 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Truck, CheckCircle, AlertCircle, Building2, Users } from "lucide-react";
-import { Card, Badge, Table, Th, Td } from "@/components/ui";
+import { Package, Truck, CheckCircle, AlertCircle, Building2, Users, KeyRound } from "lucide-react";
+import { Card, Badge, Table, Th, Td, Button, Input, Label } from "@/components/ui";
 import { formatDate, shipmentOrigin, shipmentDest } from "@/lib/utils";
 import AdminLayout from "@/components/AdminLayout";
 import Link from "next/link";
+
+function ChangePasswordCard() {
+  const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    if (form.newPassword !== form.confirmPassword) {
+      setMessage({ type: "error", text: "New passwords don't match" });
+      return;
+    }
+    setSaving(true);
+    const res = await fetch("/api/auth/change-password", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage({ type: "error", text: data.error || "Failed to change password" });
+    } else {
+      setMessage({ type: "success", text: "Password changed" });
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Card className="mt-6">
+      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+        <KeyRound className="h-5 w-5 text-gray-400" />
+        Change My Password
+      </h2>
+      {message && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+          {message.text}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <Label>Current Password</Label>
+          <Input type="password" required value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} />
+        </div>
+        <div>
+          <Label>New Password</Label>
+          <Input type="password" required minLength={6} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} />
+        </div>
+        <div>
+          <Label>Confirm New Password</Label>
+          <Input type="password" required minLength={6} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} />
+        </div>
+        <div className="sm:col-span-3">
+          <Button type="submit" disabled={saving}>
+            {saving ? "Changing..." : "Change Password"}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
@@ -114,6 +176,8 @@ export default function AdminDashboardPage() {
               <p className="text-gray-500">No shipments yet.</p>
             )}
           </Card>
+
+          <ChangePasswordCard />
         </>
       )}
     </AdminLayout>
