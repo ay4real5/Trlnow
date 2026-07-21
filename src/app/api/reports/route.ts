@@ -29,7 +29,7 @@ export async function GET(req: Request) {
           }
         : {}),
     },
-    include: { originBranch: true, destBranch: true, sender: true },
+    include: { originBranch: true, destBranch: true },
     orderBy: { createdAt: "desc" },
   });
 

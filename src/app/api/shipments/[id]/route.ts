@@ -18,9 +18,12 @@ export async function GET(
     include: {
       originBranch: true,
       destBranch: true,
-      sender: true,
+      sender: { select: { id: true, name: true, email: true, phone: true } },
       statusHistory: {
-        include: { branch: true, updatedBy: true },
+        include: {
+          branch: true,
+          updatedBy: { select: { id: true, name: true } },
+        },
         orderBy: { timestamp: "asc" },
       },
     },
@@ -70,7 +73,7 @@ export async function PATCH(
     const shipment = await prisma.shipment.update({
       where: { id: params.id },
       data: { status },
-      include: { sender: true },
+      include: { sender: { select: { id: true, name: true, email: true, phone: true } } },
     });
 
     await prisma.shipmentStatus.create({

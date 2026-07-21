@@ -104,7 +104,7 @@ export async function GET(req: Request) {
     include: {
       originBranch: true,
       destBranch: true,
-      sender: true,
+      sender: { select: { id: true, name: true, email: true, phone: true } },
       statusHistory: { orderBy: { timestamp: "asc" } },
     },
     orderBy: { createdAt: "desc" },
